@@ -129,7 +129,7 @@ module control( resetn, clk, enable, plot, era, mov);
 	            ERASE = 3'd1,
 				   MOVE = 3'd2,
 					delays = 20'd833333,
-				   frams = 24'd12499999;//d
+				   frams = 24'd12499999;
 
 	ratedivider del(1'b1, {8'b000000, delays}, clk, resetn, delay);
 	ratedivider fra(1'b1, {4'b000, frams}, clk, resetn, frame);
