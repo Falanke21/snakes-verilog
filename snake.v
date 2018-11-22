@@ -78,45 +78,16 @@ module snake
 
 endmodule
 
+module togather (resetn, clk, y, x, colour, plot);
+	input resetn, clk;
+	output [6:0] y;
+	output [7:0] x;
+	output [2:0] colour;
+	output plot;
 
-module datapath(era, mov, clk, resetn, color_out, x_out, y_out, enable);
-   input clk, enable, resetn, era, mov;
-	output [6:0] y_out;
-	output [7:0] x_out;
-	output [2:0] color_out;
-	reg [7:0] x_now;
-	reg [6:0] y_now;
-	reg [2:0] color_now, x_progress;
-
-
-
-
-
-	always @(posedge clk)
-	begin
-		if (!resetn)
-		begin
-		   x_now <= 8'd10;
-	      y_now <= 7'd10;
-			color_now <= 3'b010;
-			x_progress <= 2'b00;
-		end
-		else if (enable && era )
-			color_now <= 3'b000;
-		else if (enable && mov)
-		begin
-		   color_now <= 3'b010;
-			x_progress <= x_progress + 1'b1;
-		end
-	end
-
-
-
-
-   assign x_out = x_now + x_progress;
-	assign y_out = y_now;
-	assign color_out = color_now;
-endmodule
+	control c0(resetn, clk, enable, plot, era, mov);
+	datapath d0(era, mov, clk, resetn, colour, x, y, enable);
+endmodule // togather
 
 module control( resetn, clk, enable, plot, era, mov);
    input resetn, clk;
@@ -129,10 +100,14 @@ module control( resetn, clk, enable, plot, era, mov);
 	            ERASE = 3'd1,
 				   MOVE = 3'd2,
 					delays = 20'd833333,
-				   frams = 24'd12499999;//d
+				   frams = 24'd12499999;
+					 // simulate
+					 // frams = 10'd999;
 
 	ratedivider del(1'b1, {8'b000000, delays}, clk, resetn, delay);
 	ratedivider fra(1'b1, {4'b000, frams}, clk, resetn, frame);
+	// ratedivider fra(1'b1, {18'b000, frams}, clk, resetn, frame);
+	// for simulate
 
 	assign last = (delay == 0) ? 1 : 0;
 	assign cenable = (frame == 0) ? 1 : 0;
@@ -180,6 +155,38 @@ module control( resetn, clk, enable, plot, era, mov);
 			end
 		endcase
 	end
+endmodule
+
+module datapath(era, mov, clk, resetn, color_out, x_out, y_out, enable);
+   input clk, enable, resetn, era, mov;
+	output [6:0] y_out;
+	output [7:0] x_out;
+	output [2:0] color_out;
+	reg [7:0] x_now;
+	reg [6:0] y_now;
+	reg [2:0] color_now, x_progress;
+
+	always @(posedge clk)
+	begin
+		if (!resetn)
+		begin
+		   x_now <= 8'd10;
+	      y_now <= 7'd10;
+			color_now <= 3'b010;
+			x_progress <= 2'b00;
+		end
+		else if (enable && era )
+			color_now <= 3'b000;
+		else if (enable && mov)
+		begin
+		   color_now <= 3'b010;
+			x_progress <= x_progress + 1'b1;
+		end
+	end
+
+   assign x_out = x_now + x_progress;
+	assign y_out = y_now;
+	assign color_out = color_now;
 endmodule
 
 module ratedivider(enable, load, clk, reset_n, q);
