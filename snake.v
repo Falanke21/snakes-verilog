@@ -74,54 +74,26 @@ module snake
 
     // Instansiate FSM control
     // control c0(...);
-	control c0(resetn, CLOCK_50, enable, writeEn, era, mov);
+	control c0(resetn, CLOCK_50, enable, writeEn, SW[3], SW[2], SW[1], SW[0], era, mov);
 
 endmodule
 
+module togather (resetn, clk, y, x, colour, plot);
+	input resetn, clk;
+	output [6:0] y;
+	output [7:0] x;
+	output [2:0] colour;
+	output plot;
 
-module datapath(era, mov, clk, resetn, color_out, x_out, y_out, enable);
-   input clk, enable, resetn, era, mov;
-	output [6:0] y_out;
-	output [7:0] x_out;
-	output [2:0] color_out;
-	reg [7:0] x_now;
-	reg [6:0] y_now;
-	reg [2:0] color_now, x_progress;
+	control c0(resetn, clk, enable, plot, era, mov);
+	datapath d0(era, mov, clk, resetn, colour, x, y, enable);
+endmodule // togather
 
-
-
-
-
-	always @(posedge clk)
-	begin
-		if (!resetn)
-		begin
-		   x_now <= 8'd10;
-	      y_now <= 7'd10;
-			color_now <= 3'b010;
-			x_progress <= 2'b00;
-		end
-		else if (enable && era )
-			color_now <= 3'b000;
-		else if (enable && mov)
-		begin
-		   color_now <= 3'b010;
-			x_progress <= x_progress + 1'b1;
-		end
-	end
-
-
-
-
-   assign x_out = x_now + x_progress;
-	assign y_out = y_now;
-	assign color_out = color_now;
-endmodule
-
-module control( resetn, clk, enable, plot, era, mov);
-   input resetn, clk;
-	output reg enable, plot, era, mov;
-	reg [2:0] previous_state, next_state;
+module control(resetn, clk, enable, plot, up, down, left, right, era, mov, t_up, t_down, t_left, t_right);
+   input resetn, clk, up, down, left, right;
+	output reg enable, plot, era, mov, t_up, t_down, t_left, t_right;
+	reg [2:0] previous_move_state, next_move_state;
+	reg [1:0] previous_dir_state, next_dir_state;
 	wire cenable, last;
 	wire [27:0] frame,delay;
 
@@ -129,29 +101,83 @@ module control( resetn, clk, enable, plot, era, mov);
 	            ERASE = 3'd1,
 				   MOVE = 3'd2,
 					delays = 20'd833333,
-				   frams = 24'd12499999;//d
+				   frams = 24'd12499999;
+					 // simulate
+					 // frams = 10'd999;
+					 
+	localparam  UP = 2'd0,
+					DOWN = 2'd1,
+					LEFT = 2'd2,
+					RIGHT = 2'd3;
 
 	ratedivider del(1'b1, {8'b000000, delays}, clk, resetn, delay);
 	ratedivider fra(1'b1, {4'b000, frams}, clk, resetn, frame);
+	// ratedivider fra(1'b1, {18'b000, frams}, clk, resetn, frame);
+	// for simulate
 
 	assign last = (delay == 0) ? 1 : 0;
 	assign cenable = (frame == 0) ? 1 : 0;
 
-
 	always @(posedge clk)
 	begin
 		if (!resetn)
-		   previous_state <= DRAW;
+		   previous_move_state <= DRAW;
 		else
-			previous_state <= next_state;
+			previous_move_state <= next_move_state;
+	end
+	
+	always @(posedge clk)
+	begin
+		if (!resetn)
+		   previous_dir_state <= RIGHT;
+		else
+			previous_dir_state <= next_dir_state;
 	end
 
 	always @(*)
 	begin
-		case (previous_state)
-			DRAW: next_state = cenable ? ERASE : DRAW;
-			ERASE: next_state = cenable ? ERASE : MOVE;
-			MOVE: next_state = cenable ? MOVE : DRAW;
+		case (previous_dir_state)
+			UP: 
+			if (left)
+				next_dir_state = LEFT;
+			else if (right)
+				next_dir_state = RIGHT;
+			else
+				next_dir_state = UP;
+			
+			DOWN: 
+			if (left)
+				next_dir_state = LEFT;
+			else if (right)
+				next_dir_state = RIGHT;
+			else
+				next_dir_state = DOWN;
+				
+			LEFT: 
+			if (up)
+				next_dir_state = UP;
+			else if (down)
+				next_dir_state = DOWN;
+			else
+				next_dir_state = LEFT;
+				
+			RIGHT:
+			if (up)
+				next_dir_state = UP;
+			else if (down)
+				next_dir_state = DOWN;
+			else
+				next_dir_state = RIGHT;
+
+		endcase
+	end
+	
+	always @(*)
+	begin
+		case (previous_dir_state)
+			DRAW: next_dir_state = cenable ? ERASE : DRAW;
+			ERASE: next_dir_state = cenable ? ERASE : MOVE;
+			MOVE: next_dir_state = cenable ? MOVE : DRAW;
 
 		endcase
 	end
@@ -162,7 +188,7 @@ module control( resetn, clk, enable, plot, era, mov);
 		era = 1'b0;
 		mov = 1'b0;
 
-		case (previous_state)
+		case (previous_move_state)
 			DRAW:begin
 				plot = 1;
 				enable = 1;
@@ -180,6 +206,72 @@ module control( resetn, clk, enable, plot, era, mov);
 			end
 		endcase
 	end
+	
+	always @(*) begin
+		t_up = 1'b0;
+		t_left = 1'b0;
+		t_down = 1'b0;
+		t_right = 1'b0;
+
+		case (previous_dir_state)
+			UP:begin
+				t_up = 1'b1;
+				end
+			DOWN:begin
+			t_down = 1'b1;
+			end
+			LEFT:begin
+				t_left = 1'b1;
+				end
+			RIGHT:
+			begin
+				t_right = 1'b1;
+			end
+		endcase
+	end
+endmodule
+
+module datapath(era, mov, clk, resetn, color_out, x_out, y_out, enable);
+   input clk, enable, resetn, era, mov;
+	output [6:0] y_out;
+	output [7:0] x_out;
+	output [2:0] color_out;
+	reg [7:0] x_now;
+	reg [6:0] y_now;
+	reg [2:0] color_now;
+	reg [7:0] x_progress;
+	reg [7:0] length;
+	reg [7:0] temp;
+
+	always @(posedge clk)
+	begin
+		if (!resetn)
+		begin
+		   x_now <= 8'd0;
+	      y_now <= 7'd10;
+			color_now <= 3'b010;
+			x_progress <= 8'd5;
+			length <= 3'd3;
+		end
+		else if (enable && era ) begin
+			color_now <= 3'b000;
+			temp <= 1'b0;
+		end
+		else if (enable && mov)
+		begin
+			temp <= length;
+			if (x_progress == 8'd160)
+			begin
+				x_progress <= 8'd0;
+			end
+			color_now <= 3'b010;
+			x_progress <= x_progress + 1'b1;
+		end
+	end
+
+   assign x_out = x_now + x_progress + temp;
+	assign y_out = y_now;
+	assign color_out = color_now;
 endmodule
 
 module ratedivider(enable, load, clk, reset_n, q);
