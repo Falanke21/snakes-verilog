@@ -89,18 +89,11 @@ module togather (resetn, clk, y, x, colour, plot);
 	datapath d0(era, mov, clk, resetn, colour, x, y, enable);
 endmodule // togather
 
-<<<<<<< HEAD
 module control(resetn, clk, enable, plot, up, down, left, right, era, mov, t_up, t_down, t_left, t_right);
    input resetn, clk, up, down, left, right;
 	output reg enable, plot, era, mov, t_up, t_down, t_left, t_right;
 	reg [2:0] previous_move_state, next_move_state;
 	reg [1:0] previous_dir_state, next_dir_state;
-=======
-module control( resetn, clk, enable, plot, era, mov);
-   input resetn, clk;
-	output reg enable, plot, era, mov;
-	reg [2:0] previous_state, next_state;
->>>>>>> 1cda054a4e2098474abd48d577b7e3f2c83d9b5a
 	wire cenable, last;
 	wire [27:0] frame,delay;
 
@@ -111,14 +104,11 @@ module control( resetn, clk, enable, plot, era, mov);
 				   frams = 24'd12499999;
 					 // simulate
 					 // frams = 10'd999;
-<<<<<<< HEAD
 					 
 	localparam  UP = 2'd0,
 					DOWN = 2'd1,
 					LEFT = 2'd2,
 					RIGHT = 2'd3;
-=======
->>>>>>> 1cda054a4e2098474abd48d577b7e3f2c83d9b5a
 
 	ratedivider del(1'b1, {8'b000000, delays}, clk, resetn, delay);
 	ratedivider fra(1'b1, {4'b000, frams}, clk, resetn, frame);
@@ -280,38 +270,6 @@ module datapath(era, mov, clk, resetn, color_out, x_out, y_out, enable);
 	end
 
    assign x_out = x_now + x_progress + temp;
-	assign y_out = y_now;
-	assign color_out = color_now;
-endmodule
-
-module datapath(era, mov, clk, resetn, color_out, x_out, y_out, enable);
-   input clk, enable, resetn, era, mov;
-	output [6:0] y_out;
-	output [7:0] x_out;
-	output [2:0] color_out;
-	reg [7:0] x_now;
-	reg [6:0] y_now;
-	reg [2:0] color_now, x_progress;
-
-	always @(posedge clk)
-	begin
-		if (!resetn)
-		begin
-		   x_now <= 8'd10;
-	      y_now <= 7'd10;
-			color_now <= 3'b010;
-			x_progress <= 2'b00;
-		end
-		else if (enable && era )
-			color_now <= 3'b000;
-		else if (enable && mov)
-		begin
-		   color_now <= 3'b010;
-			x_progress <= x_progress + 1'b1;
-		end
-	end
-
-   assign x_out = x_now + x_progress;
 	assign y_out = y_now;
 	assign color_out = color_now;
 endmodule
