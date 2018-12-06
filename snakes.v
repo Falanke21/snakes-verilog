@@ -102,14 +102,14 @@ module snakes
 
 
 	 //direction wire
-	 wire [4:0] direction;
-	 kbInput kbIn(CLOCK_50, KEY, SW, direction, reset);
+    wire [4:0] direction;
+	 kbInput kbIn(CLOCK_50, KEY, SW, a_k, d_k, w_k, s_k, direction, reset);
 
 endmodule
 
 
-module datapath(clk, direction, inmenu, ingame, RGB, x_pointer, y_pointer ,inital_head );
-   input clk;
+module datapath(clk, direction, inmenu, ingame, RGB, x_pointer, y_pointer ,inital_head);
+  input clk;
 
 	output [7:0] x_pointer;
 	output [6:0] y_pointer;
@@ -362,22 +362,23 @@ module randomGrid(clk, rand_X, rand_Y);
 endmodule
 
 
-module kbInput(CLOCK_50, KEY, SW, left_k, right_k, up_k, down_k, direction, reset);
+module kbInput(CLOCK_50, KEY, SW, a_k, d_k, w_k, s_k, direction, reset);
 	input CLOCK_50;
 	input [3:0]KEY;
 	input [9:0]SW;
+	input a_k, d_k, w_k, s_k;
 	output reg [4:0] direction;
 	output reg reset = 0;
 
 	always@(*)
 	begin
-		if(~KEY[2] || up_k)
+		if(~KEY[2] || w_k)
 			direction = 5'b00010;
-		else if(~KEY[3] || left_k)
+		else if(~KEY[3] || a_k)
 			direction = 5'b00100;
-		else if(~KEY[1] || down_k)
+		else if(~KEY[1] || s_k)
 			direction = 5'b01000;
-		else if(~KEY[0] || right_k)
+		else if(~KEY[0] || d_k)
 			direction = 5'b10000;
 //		else if(SW[0])
 //			reset <= ~reset;
