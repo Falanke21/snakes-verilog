@@ -94,14 +94,14 @@ module snakes
 		datapath d0(
 	         .clk(CLOCK_50),
 	         .direction(direction),
-				.inmenu(SW[0]),
-				.ingame(SW[1]),
+				.game_reset(SW[0]),
+				.game_display(SW[1]),
 		      .RGB(colour),
-				.x_pointer(x),
-				.y_pointer(y),
+				.x_position(x),
+				.y_position(y),
 
 				//delete later
-				.inital_head(SW[2]),
+				.snake_start(SW[2]),
 				.score(scores)
 	 );
 	 
@@ -110,26 +110,26 @@ module snakes
 
 
 	 //direction wire
-    wire [4:0] direction;
+    wire [3:0] direction;
 	 kbInput kbIn(CLOCK_50, KEY, SW, a_k, d_k, w_k, s_k, direction, reset);
 
 endmodule
 
 
-module datapath(clk, direction, inmenu, ingame, RGB, x_pointer, y_pointer ,inital_head, score);
+module datapath(clk, direction, game_reset, game_display, RGB, x_position, y_position ,snake_start, score);
   input clk;
 
-	output [7:0] x_pointer;
-	output [6:0] y_pointer;
+	output [7:0] x_position;
+	output [6:0] y_position;
 	output [7:0] score;
-	input [4:0] direction;
+	input [3:0] direction;
 
 	//delete later
-	input inital_head;
+	input snake_start;
 
 	//status of game
-   input inmenu;
-	input ingame;
+   input game_reset;
+	input game_display;
 
 
 	wire R, G, B; // Will be used for concatenation for output "RGB".
@@ -141,10 +141,6 @@ module datapath(clk, direction, inmenu, ingame, RGB, x_pointer, y_pointer ,inita
 	reg menu_text; // check if the pixel is the menu's text.
 
 
-
-	//register for border
-	reg border;
-
 	//registers for snake
 	reg [6:0] size;
 	reg [7:0] score;
@@ -154,14 +150,14 @@ module datapath(clk, direction, inmenu, ingame, RGB, x_pointer, y_pointer ,inita
 	reg snakeHead;
 	reg snakeBody;
 	reg [1:0]currentDirect;
-	integer bodycounter, bodycounter2, bodycounter3;
+	integer snake_body_counter, snake_body_counter2, snake_body_counter3;
 	reg up,down,left,right;
 
-	//registers for apple
-	reg apple;
-	reg [7:0] appleX;
-	reg [6:0] appleY;
-	reg apple_inX, apple_inY;
+	//registers for food
+	reg food;
+	reg [7:0] foodX;
+	reg [6:0] foodY;
+	reg food_inX, food_inY;
 	wire [7:0]rand_X;
 	wire [6:0]rand_Y;
 
@@ -171,20 +167,20 @@ module datapath(clk, direction, inmenu, ingame, RGB, x_pointer, y_pointer ,inita
 
 
 	//down level modules
-	refresher ref0(clk, x_pointer, y_pointer);
+	updatexyPosition ref0(clk, x_position, y_position);
 	frame_updater upd0(clk, 1'b1, frame_update);
 	delay_counter dc0(clk, 1'b1, frame_update,delayed_clk);
-	randomGrid rand1(clk, rand_X, rand_Y);
+	randomApple rand1(clk, rand_X, rand_Y);
 
 	always@(posedge clk)
 	begin
-		if (inmenu)begin
+		if (game_reset)begin
 
 
 			 //initialize snake's position
-			 for(bodycounter3 = 1; bodycounter3 < 641; bodycounter3 = bodycounter3+1)begin
-					snakeX[bodycounter3] = 0;
-					snakeY[bodycounter3] = 0;
+			 for(snake_body_counter3 = 1; snake_body_counter3 < 641; snake_body_counter3 = snake_body_counter3+1)begin
+					snakeX[snake_body_counter3] = 0;
+					snakeY[snake_body_counter3] = 0;
 			 end
 
 			 //initialze snake's size
@@ -194,41 +190,30 @@ module datapath(clk, direction, inmenu, ingame, RGB, x_pointer, y_pointer ,inita
 			 //start game
 			 game_over=0;
 
-			 //initialize apple's position
-			 appleX = 15;
-			 appleY = 15;
+			 //initialize food's position
+			 foodX = 15;
+			 foodY = 15;
 
 		end
-		else if(ingame)begin
+		else if(game_display)begin
 				score = score;
-
-				//################################################################################################
-				//Add border
-				border <= (   ((x_pointer >= 2) && (x_pointer <= 4)&&(y_pointer >= 2) && (y_pointer <=112))
-								||((x_pointer >= 156)&& (x_pointer <= 158)&&(y_pointer >= 2) && (y_pointer <=112))
-								||((x_pointer >= 2) && (x_pointer <= 158)&&(y_pointer >= 2) && (y_pointer <= 4))
-								||((x_pointer >= 2) && (x_pointer <= 158)&&(y_pointer >= 110) && (y_pointer <= 112)));
-
-
-				//################################################################################################
-				//SNAKE PART STARTS FROM HERE!
 				//Add Snake body
 				found = 0;
-				for(bodycounter = 1; bodycounter <= size; bodycounter = bodycounter + 1)begin
+				for(snake_body_counter = 1; snake_body_counter <= size; snake_body_counter = snake_body_counter + 1)begin
 					if(~found)begin
-						snakeBody = ( (x_pointer >= snakeX[bodycounter] && x_pointer <= snakeX[bodycounter]+2)
-								  && (y_pointer >= snakeY[bodycounter] && y_pointer <= snakeY[bodycounter]+2));
+						snakeBody = ( (x_position >= snakeX[snake_body_counter] && x_position <= snakeX[snake_body_counter]+2)
+								  && (y_position >= snakeY[snake_body_counter] && y_position <= snakeY[snake_body_counter]+2));
 						found = snakeBody;
 					end
 				end
 
 				//Add Snake head
-				snakeHead = (x_pointer >= snakeX[0] && x_pointer <= (snakeX[0]+2))
-								&& (y_pointer >= snakeY[0] && y_pointer <= (snakeY[0]+2));
+				snakeHead = (x_position >= snakeX[0] && x_position <= (snakeX[0]+2))
+								&& (y_position >= snakeY[0] && y_position <= (snakeY[0]+2));
 
 
 				//Initial Snake's head
-				if(!inital_head) begin
+				if(!snake_start) begin
 					snakeY[0] = 60;
 					snakeX[0] = 80;
 				end
@@ -236,38 +221,38 @@ module datapath(clk, direction, inmenu, ingame, RGB, x_pointer, y_pointer ,inita
 
 				//update snake's position
 				if(delayed_clk)begin
-					for(bodycounter2 = 640; bodycounter2 > 0; bodycounter2 = bodycounter2 - 1)begin
-							if(bodycounter2 <= size - 1)begin
-								snakeX[bodycounter2] = snakeX[bodycounter2 - 1];
-								snakeY[bodycounter2] = snakeY[bodycounter2 - 1];
+					for(snake_body_counter2 = 640; snake_body_counter2 > 0; snake_body_counter2 = snake_body_counter2 - 1)begin
+							if(snake_body_counter2 <= size - 1)begin
+								snakeX[snake_body_counter2] = snakeX[snake_body_counter2 - 1];
+								snakeY[snake_body_counter2] = snakeY[snake_body_counter2 - 1];
 							end
 					end
 
 					//update snake's direction
 					case(direction)
 						//UP
-						5'b00010: if(!down)begin
+						4'b0001: if(!down)begin
 											up = 1;
 											down = 0;
 											left = 0;
 											right = 0;
 									 end
 						//LEFT
-						5'b00100:if(!right)begin
+						4'b0010:if(!right)begin
 											up = 0;
 											down = 0;
 											left = 1;
 											right = 0;
 									 end
 						//DOWN
-						5'b01000:if(!up)begin
+						4'b0100:if(!up)begin
 											up = 0;
 											down = 1;
 											left = 0;
 											right = 0;
 									end
 						//RIGHT
-						5'b10000: if(!left)begin
+						4'b1000: if(!left)begin
 											up = 0;
 											down = 0;
 											left = 0;
@@ -284,27 +269,22 @@ module datapath(clk, direction, inmenu, ingame, RGB, x_pointer, y_pointer ,inita
 						 snakeX[0] <= (snakeX[0] + 1);
 				end
 
+				//Draw an food
+				food_inX <= (x_position >= foodX && x_position <= (foodX + 2));
+				food_inY <= (y_position >=foodY && y_position <= (foodY + 2));
+				food = food_inX && food_inY;
 
-				//################################################################################################
-				//APPLE PART STARTS FROM HERE!
-				//Draw an apple
-				apple_inX <= (x_pointer >= appleX && x_pointer <= (appleX + 2));
-				apple_inY <= (y_pointer >=appleY && y_pointer <= (appleY + 2));
-				apple = apple_inX && apple_inY;
-
-				//Set apple's position
+				//Set food's position
 				if(good_collision)begin
-						appleX <= rand_X;
-						appleY <= rand_Y;
+						foodX <= rand_X;
+						foodY <= rand_Y;
 				end
-
-				//###############################################################################################
-				//CHECK COLLISION
+				
 				//if is in lethal position
-				lethal = border || snakeBody;
+				lethal = snakeBody;
 
 				//if is in nonLethal position
-				nonLethal = apple;
+				nonLethal = food;
 
 				//check good collision
 				if(nonLethal && snakeHead) begin
@@ -334,17 +314,17 @@ module datapath(clk, direction, inmenu, ingame, RGB, x_pointer, y_pointer ,inita
 
 	// Display white: menu_text
 	// Display green: the snake's head and the snake's body
-	// Display red: the apple, or game over
-	// Display blue: the border
+	// Display red: the food, or game over
 
-	assign R = apple;
+	assign R = food;
 	assign G = snakeHead||snakeBody;
-	assign B = border&&~game_over;
+//	assign B = ~game_over;
+	assign B = 0;
    assign RGB = {R, G, B};
 endmodule
 
 
-module randomGrid(clk, rand_X, rand_Y);
+module randomApple(clk, rand_X, rand_Y);
 	input clk;
 	output reg [7:0] rand_X =6;
 	output reg [6:0] rand_Y =6;
@@ -380,19 +360,19 @@ module kbInput(CLOCK_50, KEY, SW, a_k, d_k, w_k, s_k, direction, reset);
 	input [3:0]KEY;
 	input [9:0]SW;
 	input a_k, d_k, w_k, s_k;
-	output reg [4:0] direction;
+	output reg [3:0] direction;
 	output reg reset = 0;
 
 	always@(*)
 	begin
 		if(~KEY[2] || w_k)
-			direction = 5'b00010;
+			direction = 4'b0001;
 		else if(~KEY[3] || a_k)
-			direction = 5'b00100;
+			direction = 4'b0010;
 		else if(~KEY[1] || s_k)
-			direction = 5'b01000;
+			direction = 4'b0100;
 		else if(~KEY[0] || d_k)
-			direction = 5'b10000;
+			direction = 4'b1000;
 //		else if(SW[0])
 //			reset <= ~reset;
 		else direction <= direction;
@@ -403,7 +383,7 @@ endmodule
 
 
 
-module refresher(clk, x_counter, y_counter);
+module updatexyPosition(clk, x_counter, y_counter);
 // refreshes the coordinate of x and y to the next check point.
 	input clk;
 	output reg [7:0] x_counter;
