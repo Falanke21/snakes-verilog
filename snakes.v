@@ -99,7 +99,7 @@ module datapath(clk, direction, inmenu, ingame, RGB, x_pointer, y_pointer ,inita
 	//status of game
    input inmenu;
 	input ingame;
-	
+
 
 	wire R, G, B; // Will be used for concatenation for output "RGB".
 	wire frame_update; // signal for frame update
@@ -165,31 +165,6 @@ module datapath(clk, direction, inmenu, ingame, RGB, x_pointer, y_pointer ,inita
 			 appleX = 15;
 			 appleY = 15;
 
-//			 if (
-//			 // Letter "S"
-//				  (x_pointer >= 10 && x_pointer <= 36 && y_pointer >= 11  && y_pointer <= 16 )
-//				||(x_pointer >= 10 && x_pointer <= 15 && y_pointer >= 11  && y_pointer <= 33 )
-//				||(x_pointer >= 31 && x_pointer <= 36 && y_pointer >= 11  && y_pointer <= 20 )
-//				||(x_pointer >= 10 && x_pointer <= 36 && y_pointer >= 29  && y_pointer <= 33 )
-//				||(x_pointer >= 31 && x_pointer <= 36 && y_pointer >= 29  && y_pointer <= 54 )
-//				||(x_pointer >= 10 && x_pointer <= 36 && y_pointer >= 49  && y_pointer <= 54 )
-//				||(x_pointer >= 10 && x_pointer <= 15 && y_pointer >= 44  && y_pointer <= 54 )
-//
-//			 // Letter "N"
-//				||(x_pointer >= 41 && x_pointer <= 46 && y_pointer >= 11  && y_pointer <= 54 )
-//				||(x_pointer >= 46 && x_pointer <= 50 && y_pointer >= 13  && y_pointer <= 20 )
-//				||(x_pointer >= 50 && x_pointer <= 54 && y_pointer >= 20  && y_pointer <= 29 )
-//				||(x_pointer >= 53 && x_pointer <= 57 && y_pointer >= 28  && y_pointer <= 38 )
-//				||(x_pointer >= 56 && x_pointer <= 60 && y_pointer >= 37  && y_pointer <= 45 )
-//				||(x_pointer >= 59 && x_pointer <= 62 && y_pointer >= 44  && y_pointer <= 51 )
-//				||(x_pointer >= 62 && x_pointer <= 67 && y_pointer >= 11  && y_pointer <= 54 )
-//			 // Letter "A"
-//			 // Letter "K"
-//			 // Letter "E"
-//				)
-//				 menu_text <= 1'b1;
-//			 else
-//				 menu_text <= 1'b0;
 		end
 		else if(ingame)begin
 
@@ -266,13 +241,13 @@ module datapath(clk, direction, inmenu, ingame, RGB, x_pointer, y_pointer ,inita
 									end
 					endcase
 					if(up)
-						 snakeY[0] <= (snakeY[0] - 2);
+						 snakeY[0] <= (snakeY[0] - 1);
 					else if(left)
-						 snakeX[0] <= (snakeX[0] - 2);
+						 snakeX[0] <= (snakeX[0] - 1);
 					else if(down)
-						 snakeY[0] <= (snakeY[0] + 2);
+						 snakeY[0] <= (snakeY[0] + 1);
 					else if(right)
-						 snakeX[0] <= (snakeX[0] + 2);
+						 snakeX[0] <= (snakeX[0] + 1);
 				end
 
 
@@ -300,7 +275,7 @@ module datapath(clk, direction, inmenu, ingame, RGB, x_pointer, y_pointer ,inita
 				//check good collision
 				if(nonLethal && snakeHead) begin
 					good_collision<=1;
-					size = size+1;
+					size = size+5;
 				end
 				else
 					good_collision<=0;
