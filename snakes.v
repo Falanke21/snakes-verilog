@@ -14,7 +14,9 @@ module snakes
 		VGA_SYNC_N,						//	VGA SYNC
 		VGA_R,   						//	VGA Red[9:0]
 		VGA_G,	 						//	VGA Green[9:0]
-		VGA_B   						//	VGA Blue[9:0]
+		VGA_B,   						//	VGA Blue[9:0]
+		PS2_CLK,
+		PS2_DAT
 	);
 
 	input	  CLOCK_50;				//	50 MHz
@@ -31,6 +33,8 @@ module snakes
 	output	[9:0]	VGA_R;   				//	VGA Red[9:0]
 	output	[9:0]	VGA_G;	 				//	VGA Green[9:0]
 	output	[9:0]	VGA_B;   				//	VGA Blue[9:0]
+	inout 			PS2_CLK;
+	inout 			PS2_DAT;
 
 	wire resetn;
 	assign resetn = SW[4];
@@ -65,7 +69,25 @@ module snakes
 		defparam VGA.BITS_PER_COLOUR_CHANNEL = 1;
 		defparam VGA.BACKGROUND_IMAGE = "black.mif";
 
-	datapath d0(
+		wire w_k, a_k, s_k, d_k, left_k, right_k, up_k, down_k, space_k, enter_k;
+		keyboard_tracker #(.PULSE_OR_HOLD(0)) k0(
+	    .clock(CLOCK_50),
+		  .reset(SW[4]),
+		  .PS2_CLK(PS2_CLK),
+		  .PS2_DAT(PS2_DAT),
+		  .w(w_k),
+		  .a(a_k),
+		  .s(s_k),
+		  .d(d_k),
+		  .left(left_k),
+		  .right(right_k),
+		  .up(up_k),
+		  .down(down_k),
+		  .space(space_k),
+		  .enter(enter_k)
+		  );
+
+		datapath d0(
 	         .clk(CLOCK_50),
 	         .direction(direction),
 				.inmenu(SW[0]),
@@ -340,7 +362,7 @@ module randomGrid(clk, rand_X, rand_Y);
 endmodule
 
 
-module kbInput(CLOCK_50, KEY, SW,direction, reset);
+module kbInput(CLOCK_50, KEY, SW, left_k, right_k, up_k, down_k, direction, reset);
 	input CLOCK_50;
 	input [3:0]KEY;
 	input [9:0]SW;
@@ -349,13 +371,13 @@ module kbInput(CLOCK_50, KEY, SW,direction, reset);
 
 	always@(*)
 	begin
-		if(~KEY[2])
+		if(~KEY[2] || up_k)
 			direction = 5'b00010;
-		else if(~KEY[3])
+		else if(~KEY[3] || left_k)
 			direction = 5'b00100;
-		else if(~KEY[1])
+		else if(~KEY[1] || down_k)
 			direction = 5'b01000;
-		else if(~KEY[0])
+		else if(~KEY[0] || right_k)
 			direction = 5'b10000;
 //		else if(SW[0])
 //			reset <= ~reset;
