@@ -16,7 +16,9 @@ module snakes
 		VGA_G,	 						//	VGA Green[9:0]
 		VGA_B,   						//	VGA Blue[9:0]
 		PS2_CLK,
-		PS2_DAT
+		PS2_DAT,
+		HEX0,
+		HEX1
 	);
 
 	input	  CLOCK_50;				//	50 MHz
@@ -33,6 +35,7 @@ module snakes
 	output	[9:0]	VGA_R;   				//	VGA Red[9:0]
 	output	[9:0]	VGA_G;	 				//	VGA Green[9:0]
 	output	[9:0]	VGA_B;   				//	VGA Blue[9:0]
+	output   [6:0] HEX0, HEX1;
 	inout 			PS2_CLK;
 	inout 			PS2_DAT;
 
@@ -44,6 +47,7 @@ module snakes
 	wire [7:0] x;
 	wire [6:0] y;
 	wire writeEn;
+	wire [7:0] scores;
 
 	// Create an Instance of a VGA controller - there can be only one!
 	// Define the number of colours as well as the initial background
@@ -97,8 +101,12 @@ module snakes
 				.y_pointer(y),
 
 				//delete later
-				.inital_head(SW[2])
+				.inital_head(SW[2]),
+				.score(scores)
 	 );
+	 
+	 hex_decoder hex0(scores[3:0], HEX0);
+	 hex_decoder hex1(scores[7:4], HEX1);
 
 
 	 //direction wire
@@ -108,11 +116,12 @@ module snakes
 endmodule
 
 
-module datapath(clk, direction, inmenu, ingame, RGB, x_pointer, y_pointer ,inital_head);
+module datapath(clk, direction, inmenu, ingame, RGB, x_pointer, y_pointer ,inital_head, score);
   input clk;
 
 	output [7:0] x_pointer;
 	output [6:0] y_pointer;
+	output [7:0] score;
 	input [4:0] direction;
 
 	//delete later
@@ -138,6 +147,7 @@ module datapath(clk, direction, inmenu, ingame, RGB, x_pointer, y_pointer ,inita
 
 	//registers for snake
 	reg [6:0] size;
+	reg [7:0] score;
 	reg [7:0] snakeX[0:640];
 	reg [6:0] snakeY[0:640];
 	reg found;
@@ -179,6 +189,7 @@ module datapath(clk, direction, inmenu, ingame, RGB, x_pointer, y_pointer ,inita
 
 			 //initialze snake's size
 			 size = 1;
+			 score = 0;
 
 			 //start game
 			 game_over=0;
@@ -189,6 +200,7 @@ module datapath(clk, direction, inmenu, ingame, RGB, x_pointer, y_pointer ,inita
 
 		end
 		else if(ingame)begin
+				score = score;
 
 				//################################################################################################
 				//Add border
@@ -297,7 +309,8 @@ module datapath(clk, direction, inmenu, ingame, RGB, x_pointer, y_pointer ,inita
 				//check good collision
 				if(nonLethal && snakeHead) begin
 					good_collision<=1;
-					size = size+5;
+					size = size+2;
+					score = score + 1;
 				end
 				else
 					good_collision<=0;
@@ -465,4 +478,31 @@ module delay_counter(clk, reset_n, en_delay,delayed_clk);
 	end
 
 	assign delayed_clk = (delay == 2)? 1: 0;
+endmodule
+
+
+module hex_decoder(hex_digit, segments);
+    input [3:0] hex_digit;
+    output reg [6:0] segments;
+
+    always @(*)
+        case (hex_digit)
+            4'h0: segments = 7'b100_0000;
+            4'h1: segments = 7'b111_1001;
+            4'h2: segments = 7'b010_0100;
+            4'h3: segments = 7'b011_0000;
+            4'h4: segments = 7'b001_1001;
+            4'h5: segments = 7'b001_0010;
+            4'h6: segments = 7'b000_0010;
+            4'h7: segments = 7'b111_1000;
+            4'h8: segments = 7'b000_0000;
+            4'h9: segments = 7'b001_1000;
+            4'hA: segments = 7'b000_1000;
+            4'hB: segments = 7'b000_0011;
+            4'hC: segments = 7'b100_0110;
+            4'hD: segments = 7'b010_0001;
+            4'hE: segments = 7'b000_0110;
+            4'hF: segments = 7'b000_1110;
+            default: segments = 7'h7f;
+        endcase
 endmodule
