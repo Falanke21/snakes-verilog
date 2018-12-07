@@ -40,7 +40,7 @@ module snakes
 	inout 			PS2_DAT;
 
 	wire resetn;
-	assign resetn = SW[4];
+	assign resetn = SW[9];
 
 	// Create the colour, x, y and writeEn wires that are inputs to the controller.
 	wire [2:0] colour;
@@ -76,7 +76,7 @@ module snakes
 		wire w_k, a_k, s_k, d_k, left_k, right_k, up_k, down_k, space_k, enter_k;
 		keyboard_tracker #(.PULSE_OR_HOLD(0)) k0(
 	    .clock(CLOCK_50),
-		  .reset(SW[4]),
+		  .reset(SW[9]),
 		  .PS2_CLK(PS2_CLK),
 		  .PS2_DAT(PS2_DAT),
 		  .w(w_k),
@@ -94,13 +94,12 @@ module snakes
 		datapath d0(
 	         .clk(CLOCK_50),
 	         .direction(direction),
-				.game_reset(SW[0]),
-				.game_display(SW[1]),
+				.game_reset(SW[1]),
+				.game_display(SW[0]),
 		      .RGB(colour),
 				.x_position(x),
 				.y_position(y),
 
-				//delete later
 				.snake_start(SW[2]),
 				.score(scores)
 	 );
@@ -124,7 +123,6 @@ module datapath(clk, direction, game_reset, game_display, RGB, x_position, y_pos
 	output [7:0] score;
 	input [3:0] direction;
 
-	//delete later
 	input snake_start;
 
 	//status of game
@@ -132,13 +130,11 @@ module datapath(clk, direction, game_reset, game_display, RGB, x_position, y_pos
 	input game_display;
 
 
-	wire R, G, B; // Will be used for concatenation for output "RGB".
+	wire R, G, B;
 	wire frame_update; // signal for frame update
 	wire delayed_clk;
 
 	output [2:0] RGB; // the colour used for output
-
-	reg menu_text; // check if the pixel is the menu's text.
 
 
 	//registers for snake
@@ -162,8 +158,8 @@ module datapath(clk, direction, game_reset, game_display, RGB, x_position, y_pos
 	wire [6:0]rand_Y;
 
 	//registers for game status
-	reg lethal, nonLethal;
-	reg bad_collision, good_collision, game_over;
+	reg kill, safe;
+	reg kill_collision, eat_food, game_over;
 
 
 	//down level modules
@@ -197,28 +193,18 @@ module datapath(clk, direction, game_reset, game_display, RGB, x_position, y_pos
 		end
 		else if(game_display)begin
 				score = score;
-				//Add Snake body
-				found = 0;
-				for(snake_body_counter = 1; snake_body_counter <= size; snake_body_counter = snake_body_counter + 1)begin
-					if(~found)begin
-						snakeBody = ( (x_position >= snakeX[snake_body_counter] && x_position <= snakeX[snake_body_counter]+2)
-								  && (y_position >= snakeY[snake_body_counter] && y_position <= snakeY[snake_body_counter]+2));
-						found = snakeBody;
-					end
+				
+				//Draw a food
+				food_inX <= (x_position >= foodX && x_position <= (foodX + 2));
+				food_inY <= (y_position >=foodY && y_position <= (foodY + 2));
+				food = food_inX && food_inY;
+
+				//Set food's position
+				if(eat_food)begin
+						foodX <= rand_X;
+						foodY <= rand_Y;
 				end
-
-				//Add Snake head
-				snakeHead = (x_position >= snakeX[0] && x_position <= (snakeX[0]+2))
-								&& (y_position >= snakeY[0] && y_position <= (snakeY[0]+2));
-
-
-				//Initial Snake's head
-				if(!snake_start) begin
-					snakeY[0] = 60;
-					snakeX[0] = 80;
-				end
-
-
+				
 				//update snake's position
 				if(delayed_clk)begin
 					for(snake_body_counter2 = 640; snake_body_counter2 > 0; snake_body_counter2 = snake_body_counter2 - 1)begin
@@ -259,52 +245,64 @@ module datapath(clk, direction, game_reset, game_display, RGB, x_position, y_pos
 											right = 1;
 									end
 					endcase
+					
 					if(up)
-						 snakeY[0] <= (snakeY[0] - 1);
+						 snakeY[0] = (snakeY[0] - 1);
 					else if(left)
-						 snakeX[0] <= (snakeX[0] - 1);
+						 snakeX[0] = (snakeX[0] - 1);
 					else if(down)
-						 snakeY[0] <= (snakeY[0] + 1);
+						 snakeY[0] = (snakeY[0] + 1);
 					else if(right)
-						 snakeX[0] <= (snakeX[0] + 1);
-				end
-
-				//Draw an food
-				food_inX <= (x_position >= foodX && x_position <= (foodX + 2));
-				food_inY <= (y_position >=foodY && y_position <= (foodY + 2));
-				food = food_inX && food_inY;
-
-				//Set food's position
-				if(good_collision)begin
-						foodX <= rand_X;
-						foodY <= rand_Y;
+						 snakeX[0] = (snakeX[0] + 1);
 				end
 				
-				//if is in lethal position
-				lethal = snakeBody;
+				//Add Snake body
+				found = 0;
+				for(snake_body_counter = 1; snake_body_counter <= size; snake_body_counter = snake_body_counter + 1)begin
+					if(~found)begin
+						snakeBody = ( (x_position >= snakeX[snake_body_counter] && x_position <= snakeX[snake_body_counter]+2)
+								  && (y_position >= snakeY[snake_body_counter] && y_position <= snakeY[snake_body_counter]+2));
+						found = snakeBody;
+					end
+				end
 
-				//if is in nonLethal position
-				nonLethal = food;
+				//Add Snake head
+				snakeHead = (x_position >= snakeX[0] && x_position <= (snakeX[0]+2))
+								&& (y_position >= snakeY[0] && y_position <= (snakeY[0]+2));
+
+
+				//Initial Snake's head
+				if(!snake_start) begin
+					snakeY[0] = 60;
+					snakeX[0] = 80;
+				end
+
+				
+				//if is in kill position
+				kill = snakeBody;
+
+				//if is in safe position
+				safe = food;
 
 				//check good collision
-				if(nonLethal && snakeHead) begin
-					good_collision<=1;
+				if(safe && snakeHead) begin
+					eat_food<=1;
 					size = size+2;
 					score = score + 1;
 				end
 				else
-					good_collision<=0;
+					eat_food<=0;
 
 				//check bad collision
-				if(lethal && snakeHead) begin
-					bad_collision<=1;
+				if(kill && snakeHead) begin
+					kill_collision<=1;
 				end
 				else begin
-					bad_collision<=0;
+					kill_collision<=0;
 				end
 
 				//check game over
-				if(bad_collision) begin
+				if(kill_collision) begin
 					game_over<=1;
 				end
 
@@ -312,13 +310,11 @@ module datapath(clk, direction, game_reset, game_display, RGB, x_position, y_pos
 		end
 	end
 
-	// Display white: menu_text
 	// Display green: the snake's head and the snake's body
 	// Display red: the food, or game over
 
 	assign R = food;
 	assign G = snakeHead||snakeBody;
-//	assign B = ~game_over;
 	assign B = 0;
    assign RGB = {R, G, B};
 endmodule
@@ -373,8 +369,7 @@ module kbInput(CLOCK_50, KEY, SW, a_k, d_k, w_k, s_k, direction, reset);
 			direction = 4'b0100;
 		else if(~KEY[0] || d_k)
 			direction = 4'b1000;
-//		else if(SW[0])
-//			reset <= ~reset;
+
 		else direction <= direction;
 	end
 endmodule
